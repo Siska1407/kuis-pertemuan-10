@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kuis Interaktif Pertemuan 10</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 480px;
+      box-sizing: border-radius;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+      margin-top: 0;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .option-btn {
+      background: #e7e7e7;
+      color: #333;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .option-btn:hover {
+      background: #ddd;
+    }
+    .hidden {
+      display: none;
+    }
+    .score-box {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #2196F3;
+      margin: 20px 0;
+    }
+    #status-msg {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- TAMPILAN 1: FORM DATA DIRI -->
+    <div id="form-container">
+      <h2>Kuis Pertemuan 10</h2>
+      <div class="input-group">
+        <label for="nama">Nama Lengkap:</label>
+        <input type="text" id="nama" placeholder="Masukkan nama kamu">
+      </div>
+      <div class="input-group">
+        <label for="kelas">Kelas:</label>
+        <input type="text" id="kelas" placeholder="Masukkan kelas kamu">
+      </div>
+      <button onclick="mulaiKuis()">Mulai Kuis</button>
+    </div>
+
+    <!-- TAMPILAN 2: SOAL KUIS -->
+    <div id="kuis-container" class="hidden">
+      <h3 id="pertanyaan">Soal akan muncul di sini</h3>
+      <div id="pilihan-jawaban"></div>
+    </div>
+
+    <!-- TAMPILAN 3: HASIL & KIRIM NILAI -->
+    <div id="hasil-container" class="hidden">
+      <h2>Kuis Selesai!</h2>
+      <p class="score-box" id="skor-text">Skor Kamu: 0</p>
+      <button id="btn-kirim" onclick="kirimKeGoogleSheets()">Kirim Hasil ke Google Sheets</button>
+      <p id="status-msg"></p>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // BARIS DI BAWAH INI ADALAH TEMPAT MEMASUKKAN URL WEB APP GOOGLE APPS SCRIPT
+    // =========================================================================
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxroPvgZ0fpcWDcs_haCvkvYD_33wmOjtpI2fdmkgPOy87VFVjcu9VyylGJNHErmzao/exec';
+
+    // Data Soal (Bisa Kamu Tambah / Ubah Pertanyaan & Jawabannya di Sini)
+    const daftarSoal = [
+      {
+        soal: "1. Apa fungsi dari tag <h1> dalam HTML?",
+        pilihan: ["Membuat Judul Utama", "Membuat Paragraf", "Membuat Gambar", "Membuat Link"],
+        jawabanBenar: 0 // Pilihan ke-0 (pilihan pertama)
+      },
+      {
+        soal: "2. Ekstensi file untuk halaman web HTML adalah...",
+        pilihan: [".doc", ".html", ".exe", ".png"],
+        jawabanBenar: 1 // Pilihan ke-1 (pilihan kedua)
+      },
+      {
+        soal: "3. Tag HTML yang digunakan untuk berpindah baris baru adalah...",
+        pilihan: ["<p>", "<br>", "<line>", "<hr>"],
+        jawabanBenar: 1
+      }
+    ];
+
+    let indexSoal = 0;
+    let skorTotal = 0;
+    let namaMurid = "";
+    let kelasMurid = "";
+
+    function mulaiKuis() {
+      namaMurid = document.getElementById('nama').value.trim();
+      kelasMurid = document.getElementById('kelas').value.trim();
+
+      if (!namaMurid || !kelasMurid) {
+        alert('Silakan isi Nama dan Kelas terlebih dahulu!');
+        return;
+      }
+
+      document.getElementById('form-container').classList.add('hidden');
+      document.getElementById('kuis-container').classList.remove('hidden');
+      tampilkanSoal();
+    }
+
+    function tampilkanSoal() {
+      const soalSaatIni = daftarSoal[indexSoal];
+      document.getElementById('pertanyaan').innerText = soalSaatIni.soal;
+
+      const containerPilihan = document.getElementById('pilihan-jawaban');
+      containerPilihan.innerHTML = '';
+
+      soalSaatIni.pilihan.forEach((pilihanText, index) => {
+        const btn = document.createElement('button');
+        btn.innerText = pilihanText;
+        btn.className = 'option-btn';
+        btn.onclick = () => pilihJawaban(index);
+        containerPilihan.appendChild(btn);
+      });
+    }
+
+    function pilihJawaban(indexDipilih) {
+      if (indexDipilih === daftarSoal[indexSoal].jawabanBenar) {
+        skorTotal += Math.round(100 / daftarSoal.length);
+      }
+
+      indexSoal++;
+
+      if (indexSoal < daftarSoal.length) {
+        tampilkanSoal();
+      } else {
+        selesaiKuis();
+      }
+    }
+
+    function selesaiKuis() {
+      document.getElementById('kuis-container').classList.add('hidden');
+      document.getElementById('hasil-container').classList.remove('hidden');
+      document.getElementById('skor-text').innerText = `Skor Kamu: ${skorTotal}`;
+    }
+
+    function kirimKeGoogleSheets() {
+      const btnKirim = document.getElementById('btn-kirim');
+      const statusMsg = document.getElementById('status-msg');
+
+      if (scriptURL === 'PASTE_URL_WEB_APP_KAMU_DI_SINI' || !scriptURL) {
+        alert('Kamu belum mengganti PASTE_URL_WEB_APP_KAMU_DI_SINI dengan URL Apps Script milikmu!');
+        return;
+      }
+
+      btnKirim.disabled = true;
+      statusMsg.style.color = 'blue';
+      statusMsg.innerText = 'Mengirim hasil... Silakan tunggu.';
+
+      fetch(scriptURL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nama: namaMurid,
+          kelas: kelasMurid,
+          skor: skorTotal
+        })
+      })
+      .then(() => {
+        statusMsg.style.color = 'green';
+        statusMsg.innerText = '✅ Hasil kuis berhasil dikirim ke Google Sheets!';
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        statusMsg.style.color = 'red';
+        statusMsg.innerText = '❌ Gagal mengirim hasil. Coba lagi.';
+        btnKirim.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
